@@ -9,7 +9,7 @@
 **/
 
 //for initialization of features and dashboard admin
-class pdf_viewer_init{
+class pdf_viewer{
 	
 	private $myBase; 
 	
@@ -82,8 +82,7 @@ class pdf_viewer_init{
 			$this->insert_doc_into_post($_POST);
 		}
 		if( isset($_POST['insert_new']) ) { 
-		   	$pv = new pdf_viewer();
-		   	$post_id = $pv->upload($_POST);
+		   	$post_id = $this->upload($_POST);
 			if(is_numeric($post_id)) {
 				$_POST['post_id'] = $post_id;
 				$this->insert_doc_into_post($_POST);
@@ -319,13 +318,6 @@ class pdf_viewer_init{
 		add_media_page( 'Manage Documents', 'Documents', 'upload_files', 'managedocs', array($this, 'upload_form') );
 	}
 	
-	//add shortcode
-	public function display($atts) {
-		$pv = new pdf_viewer();
-		return $pv->display($atts);
-		
-	}
-	
 	//sets up WP mgmt form
 	public function upload_form() {
 		
@@ -365,17 +357,7 @@ class pdf_viewer_init{
 		<?php
 		//handles submit function of form
 		if (isset($_POST['title']))
-		  {
-		   	$pv = new pdf_viewer();
-		   	$pv->upload($_POST);
-		  }
-		
-	}
-}
-
-//handles specific functions
-class pdf_viewer{
-	public function __construct() {
+		   	$this->upload($_POST);
 		
 	}
 	
@@ -401,13 +383,14 @@ class pdf_viewer{
 		return $post_id;
 	}
 	
+	//add shortcode
 	//handles the shortcode with pdf.js
 	public function display($atts) {
 		extract( shortcode_atts( array(
 			'post_id' => 'test',
 			'linked_text' => 'My Document',
 			'width' => '100%',
-			'height' => '700px',
+			'height' => '650px',
 			'lightbox' => false,
 			'iframe' => false,
 			'booklet' => true,
@@ -628,5 +611,5 @@ class pdf_viewer{
 }
 
 
-new pdf_viewer_init();
+new pdf_viewer();
 ?>
