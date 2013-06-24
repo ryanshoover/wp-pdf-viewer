@@ -376,50 +376,29 @@ class pdf_viewer_init{
 //handles specific functions
 class pdf_viewer{
 	public function __construct() {
-		require_once 'classes/phmagick/phmagick.php';
-		$this->load_booklet_js();
+		
 	}
 	
 	//handles the upload and processing of document
 	public function upload($input) {
-		$filename = urlencode( basename( $input['title']) );
+		$title = urlencode( basename( $input['title']) );
 		$wp_upload_dir = wp_upload_dir();
-		$dir = $wp_upload_dir['path'] . '/' .$filename .'-' .time();
-		$url = $wp_upload_dir['url'] . '/' .$filename .'-' .time();
-		$success = mkdir($dir, 0777);
-		$destination = $dir ."/page";
+		$filename = urlencode($_FILES['uploadfile']['name']);
 		
-		$post = array(
-			'post_name'		=> $filename,
-			'post_type'		=> 'seu_document',
-			'post_content'	=> $dir,
-			'post_status'	=> 'publish',
-			'guid'			=> $url
-		);
-		$post_id = wp_insert_post($post);
-		
-		$target = $dir .'/' .urlencode($_FILES['uploadfile']['name']);
-
-		if(move_uploaded_file($_FILES['uploadfile']['tmp_name'], $target ) ) {
-			  $p = new phmagick( $target, $destination);
-			  //$p->setImageMagickPath('/opt/local/bin/'); //This is only needed if your server doesn't have a PATH to imagemagick
-			  $count = $p->getPageCount();
-			  $p->setImageQuality(90);
-			  $p->setDensity(600);
-			  
-			  for($i=0; $i<$count; $i++) {
-				  $p->setSource($target ."[$i]");
-				  $p->setDestination($destination .'-' .str_pad($i, 3, '0', STR_PAD_LEFT) .'.png');
-				  $p->convert();
-			  }
-			  echo $dir;
+		if( move_uploaded_file($_FILES['uploadfile']['tmp_name'], $wp_upload_dir['path']."/$filename" ) ) {
+			 $post_id = wp_insert_post( array(
+				  'post_name'		=> $title,
+				  'post_type'		=> 'seu_document',
+				  'post_content'	=> 'no',
+				  'post_status'		=> 'publish',
+				  'post_mime_type'	=> 'application/pdf',
+				  'guid'			=> $wp_upload_dir['url']."/$filename"
+			 ));
 		} else{
 			 $error = "There was an error uploading the file. Please try again.\n";
 			 return $error;
 		}
-		
 		return $post_id;
-		
 	}
 	
 	//handles the shortcode with pdf.js
@@ -437,16 +416,12 @@ class pdf_viewer{
 		), $atts ) );
 		
 		$post = get_post($post_id);
-		$post_path = $post->post_content;
-		$post_pdf_a = glob($post_path . '/*.pdf');
-		$post_pdf = str_replace($_SERVER['DOCUMENT_ROOT'], '', $post_pdf_a[0]);
-		$pages = glob($post_path . '/page*.png');
-		$image_size = getimagesize($pages[0]);
+		$post_path = $post->guid;
 		$myBase = plugins_url("", __FILE__);
 		
 		$content = '<iframe class="pdf" webkitallowfullscreen mozallowfullscreen allowfullscreen frameborder="no" width="'.$width.'" height="'.$height.'" src="';
-  		$content .=  $myBase.'/pdf.js/web/viewer.html?file=' . $post_pdf;
-		$content .= '">' . $post_pdf . '</iframe>';
+  		$content .=  $myBase.'/pdf.js/web/viewer.html?file=' . $post_path;
+		$content .= '">' . $post_path . '</iframe>';
 		return $content;	
 	}
 	
