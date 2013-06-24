@@ -26,7 +26,8 @@ include_once($wp_path .'/wp-load.php');
 include_once($wp_path .'/wp-includes/wp-db.php');
 
 $myBase = plugins_url("", __FILE__);
-
+wp_enqueue_script('jquery');
+wp_enqueue_script('jquery-ui-core');
 ?>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/jquery-ui.min.js"></script>

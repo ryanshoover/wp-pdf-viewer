@@ -17,8 +17,6 @@ class pdf_viewer{
 		
 		$this->myBase = plugins_url("", __FILE__);
 		
-		require_once 'classes/phmagick/phmagick.php';
-		
 		//add doc upload mgmt into media management screen
 		add_filter('media_upload_tabs', array($this, 'add_media_menu'));
 		add_action('media_upload_document', array($this, 'media_menu_handle'));
@@ -43,16 +41,17 @@ class pdf_viewer{
 	}
 	
 	//returns the shortcode to the tinymce box
-	public function insert_doc_into_post($post) {
-		$lightbox = $_POST['lightbox'];
-		$booklet = $_POST['booklet'];
-		$width = $_POST['width'];
-		$post_id = $_POST['post_id'];
-		$linked_text = $_POST['linktext'];
-		$coverpage = $_POST['coverpage'];
-		$savable = $_POST['savable'];
+	private function insert_doc_into_post($vars) {
+		//strip blank values
+		$vars['insert_existing']=0;
+		$vars['insert_new']=0;
+		$vars=array_filter($vars);
 		
-		$html = '[pdf post_id="' .$post_id .'" linked_text="' .$linked_text .'" width="' .$width .'" lightbox="' .$lightbox .'" booklet="' .$booklet .'" coverpage="' .$coverpage .'" savable="' .$savable .'"]';
+		$html = '[pdf ';
+		foreach($vars as $key => $val) 
+			$html .= " $key=" .(is_numeric($val) ? $val : "'".$val."'");	
+		
+		$html .= ']';
 	  	$html = apply_filters('media_send_to_editor', $html, $send_id, $attachment);
 		
 		return media_send_to_editor($html);
@@ -67,8 +66,8 @@ class pdf_viewer{
 	  wp_enqueue_script('media-upload');
 	  wp_enqueue_script('thickbox');
 	  wp_enqueue_style( 'thickbox');
-	  wp_enqueue_script('page-flipper', $this->myBase .'/script.js');
-	  wp_enqueue_style( 'page-flipper', $this->myBase .'/style.css');
+	  wp_enqueue_script('pdf-viewer-admin', $this->myBase .'/classes/script-admin.js');
+	  wp_enqueue_style( 'pdf-viewer-admin', $this->myBase .'/classes/style-admin.css');
 	  //wp_enqueue_script('jquery-validate', $this->myBase .'/classes/jquery.validate.min.js');
 	  
 	  media_upload_header();
@@ -285,7 +284,7 @@ class pdf_viewer{
 	public function add_post_type() {
 		$options = array(
 			'label' 		=> 'Documents',
-			'description'	=> 'Inserts PDF as responsive flipper',
+			'description'	=> 'Inserts PDF directly into the webpage',
 		);
 		register_post_type('seu_document', $options);	
 	}
@@ -314,12 +313,14 @@ class pdf_viewer{
 	}
 	
 	//creates mgmt page
+	//**not yet implemented
 	public function add_doc_management() {
-		add_media_page( 'Manage Documents', 'Documents', 'upload_files', 'managedocs', array($this, 'upload_form') );
+		add_media_page( 'Manage Documents', 'Documents', 'upload_files', 'managedocs', array($this, 'doc_management_form') );
 	}
 	
-	//sets up WP mgmt form
-	public function upload_form() {
+	//sets up WP dashboard mgmt form
+	//**not yet implemented
+	public function doc_management_form() {
 		
 		wp_enqueue_media(); //setup all necessary upload media scripts
 		?>
@@ -387,8 +388,8 @@ class pdf_viewer{
 	//handles the shortcode with pdf.js
 	public function display($atts) {
 		extract( shortcode_atts( array(
-			'post_id' => 'test',
-			'linked_text' => 'My Document',
+			'post_id' => 1,
+			'linktext' => 'PDF Document',
 			'width' => '100%',
 			'height' => '650px',
 			'lightbox' => false,
@@ -400,211 +401,40 @@ class pdf_viewer{
 		
 		$post = get_post($post_id);
 		$post_path = $post->guid;
-		$myBase = plugins_url("", __FILE__);
-		
-		$content = '<iframe class="pdf" webkitallowfullscreen mozallowfullscreen allowfullscreen frameborder="no" width="'.$width.'" height="'.$height.'" src="';
-  		$content .=  $myBase.'/pdf.js/web/viewer.html?file=' . $post_path;
-		$content .= '">' . $post_path . '</iframe>';
-		return $content;	
-	}
-	
-	//handles the shortcode with imagemagick images
-	public function display_images($atts) {
-		extract( shortcode_atts( array(
-			'post_id' => 'test',
-			'linked_text' => 'My Document',
-			'width' => '100%',
-			'lightbox' => false,
-			'iframe' => false,
-			'booklet' => true,
-			'coverpage' => false,
-			'savable' => true,
-		), $atts ) );
-		
-		$post = get_post($post_id);
-		$post_path = $post->post_content;
-		$post_pdf_a = glob($post_path . '/*.pdf');
-		$post_pdf = str_replace($_SERVER['DOCUMENT_ROOT'], '', $post_pdf_a[0]);
-		$pages = glob($post_path . '/page*.png');
-		$image_size = getimagesize($pages[0]);
-		$myBase = plugins_url("", __FILE__);
-		
-		$this->load_fancybox();
-		$send_data = json_encode($atts);
 		
 		if($lightbox) {
-			$output = "<a href='" .$myBase ."/insert_doc.php?data=" .$send_data ."' class='fancybox' title='" .$linked_text ."'>" .$linked_text ."</a>";
-			$output .="
-			<script>
-			jQuery(function ($) {
-				$(function() {
-					$('.fancybox').fancybox({
-						//fsBtn: true,
-						type     : 'iframe',
-						autoSize : false,
-						width    : '95%',
-						height   : '92%',
-						helpers  : {
-							title: {
-								type: 'inside'
-							}
-						}
-					});
-				});
-			});
-			</script>
-			";
-			return $output;
-		}
-		
-		$output = "<div id='" .$post->post_name ."-dad' class='booklet-dad' style='width:$width;'>";
-		$output .= "<div id='" .$post->post_name ."-container' class='booklet-container'>";
-		$output .= "<div id='" .$post->post_name ."'>";
-		
-		foreach($pages as $page) {
-			$page = str_replace($_SERVER['DOCUMENT_ROOT'], '', $page);
-			$output .= "
-			<div>
-				<img src='" .$page ."' width='100%' class='docimage singlepage'>
-			</div>";	
-		}       
-         
-		$output .= "
-			</div><!--/booklet-->
-			</div><!--/booklet-container-->
-			<div id='booklet-nav'>
-				<img src='$myBase/images/zoom-in.png' id='booklet-in' class='booklet-zoom'>
-				<img src='$myBase/images/zoom-out.png' id='booklet-out' class='booklet-zoom'>";
-		if(!$iframe) $output .= "<a href='" .$myBase ."/insert_doc.php?data=" .$send_data ."' class='fancybox booklet-zoom white' title='" .$linked_text ."'><img src='$myBase/images/fullscreen.png' class='booklet-zoom'></a>";
-		if($savable) $output .= "<a href='$post_pdf' class='fancy-box white booklet-zoom'>download</a>";
-		$output .= "<div id='switch-mode' class='fancy-box white booklet-zoom'>view single page</div>";
-		$output .= "
-			</div><!--/booklet-nav-->
-			</div><!--/booklet-dad-->";
-		
-		$output .= "<script type='text/javascript'>
-					var imgw = 0;
-					var imgh = 0;
-					";
-		if($iframe) {
-			$output .= "
-				h = $(window).height() -35;
-				w = h*1.544; //hard coded to 8.5x11 dimensions
-				$(function() {
-					$('#" .$post->post_name ."-dad').width(w);
-					$('#" .$post->post_name ."-dad').height(h);
-					$('#" .$post->post_name ."').booklet({
-						width: w,
-						height: h,
-						overlays: false
-					});
-				";	
+			//insert link that opens pdf in a lightbox
+			add_thickbox();
+			wp_enqueue_script('pdf-viewer', $this->myBase .'/classes/script.js');
+	  		//wp_enqueue_style( 'pdf-viewer', $this->myBase .'/classes/style.css');
+			$content  = "<div id='pdf-viewer-$post_id' class='pdf-viewer-thickbox' style='display:none;'>";
+			$content .= '<iframe class="pdf" webkitallowfullscreen mozallowfullscreen allowfullscreen frameborder="no" width="'.$width.'" height="'.$height.'" src="';
+  			$content .=  $this->myBase.'/classes/pdf.js/web/viewer.html?file=' . $post_path;
+			$content .= '">' . $post_path . '</iframe>';
+			$content .= "</div>";
+			$content .= "<a href='#TB_inline?width=800&height=600&inlineId=pdf-viewer-$post_id' class='thickbox' title='$linktext'>$linktext</a>";
+			return $content;
+			
 		} else {
-		 
-			$output .= "
-				w = jQuery('#" .$post->post_name ."-dad').width();
-				h = w*" .($image_size[1])/($image_size[0]*2) .";
-				jQuery(function ($) {
-					$('#" .$post->post_name ."-container').height(h);";
-			if($booklet) {
-				$output.= "	
-					$(function() {
-						$('.docimage').removeClass('singlepage');
-						$('#" .$post->post_name ."').booklet({
-							width: w,
-							height:h,
-							overlays: false, ";
-					if($coverpage) { $output .= "
-							closed	:	true,
-							covers	: true,
-							autoCenter	: true, ";  }
-				$output .= "
-						});
-					});
-				";
-			} else {
-				$output .= "
-					$('#switch-mode').html('view booklet');
-					sh = w;
-					$('#" .$post->post_name ."-container').height(sh);
-					$('.booklet-container div div').css('marginBottom', '10px');";
-			}
+			//insert pdf directly into post
+			$content = '<iframe class="pdf" webkitallowfullscreen mozallowfullscreen allowfullscreen frameborder="no" width="'.$width.'" height="'.$height.'" src="';
+  			$content .=  $this->myBase.'/classes/pdf.js/web/viewer.html?file=' . $post_path;
+			$content .= '">' . $post_path . '</iframe>';
+			return $content;	
 		}
-		$output .="
-				//switch mode function
-				$('#switch-mode').click(function() {
-						$('#" .$post->post_name ."').booklet({
-							  width: w,
-							  height:h,
-							  overlays: false, ";
-		if($coverpage) { $output .= "
-							  closed	:	true,
-							  covers	: true,
-							  autoCenter	: true, ";  }
-
-		$output .= "
-						  });
-						if($(this).html() == 'view single page') {
-							$(this).html('view booklet');
-							$('#" .$post->post_name ."').booklet('destroy');
-							sh = w;
-							$('#" .$post->post_name ."-container').height(sh);
-							$('.docimage').addClass('singlepage');
-							$('.booklet-container div div').css('marginBottom', '10px');
-						} else {
-							$(this).html('view single page');
-							$('#" .$post->post_name ."-container').height(h);
-							$('.docimage').removeClass('singlepage');
-							$('img.docimage').width('100%');
-							$('.booklet-container div div').css('marginBottom', '0');
-						}
-					});
-				//zoom functions
-				$('#booklet-in').click(function() { 
-					if($(\"img.docimage\").hasClass('singlepage')) {
-						imgw = $('img.singlepage').width() *1.2 +'px';
-						$(\"img.singlepage\").width(imgw);
-					} else {
-						imgw = $('#" .$post->post_name ."').width() *1.2;
-						imgh = $('#" .$post->post_name ."').height() *1.2;
-						$('#" .$post->post_name ."').booklet('option', 'width', imgw);
-						$('#" .$post->post_name ."').booklet('option', 'height', imgh);
-					}\n";
-		if(iframe) $output .="$('.booklet-dad').width( imgw);";	
-		$output .= "
-				});
-				$('#booklet-out').click(function() { 
-					if($(\"img.docimage\").hasClass('singlepage')) {
-						imgw = $('img.singlepage').width() /1.2 +'px';
-						$('img.singlepage').width(imgw);
-					} else {
-						imgw = $('#" .$post->post_name ."').width() /1.2;
-						imgh = $('#" .$post->post_name ."').height() /1.2;
-						$('#" .$post->post_name ."').booklet('option', 'width', imgw);
-						$('#" .$post->post_name ."').booklet('option', 'height', imgh);
-					}\n";
-		if(iframe) $output .="$('.booklet-dad').width( imgw);";	
-		$output .= "
-				});
-			});
-			</script>
-			";
-		return $output;
 	}
 	
 	public function load_booklet_js() {
-		$myBase = plugins_url("", __FILE__);
        // -- Booklet --
         wp_enqueue_script('jqueryui', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.8/jquery-ui.min.js');
-        wp_enqueue_script('jqueryeasing', $myBase .'/booklet/jquery.easing.1.3.js');
-        wp_enqueue_script('booklet', $myBase ."/booklet/jquery.booklet.latest.js");
-        wp_enqueue_style('bookletcss', $myBase ."/booklet/jquery.booklet.latest.css");
+        wp_enqueue_script('jqueryeasing', $this->myBase .'/booklet/jquery.easing.1.3.js');
+        wp_enqueue_script('booklet', $this->myBase ."/booklet/jquery.booklet.latest.js");
+        wp_enqueue_style('bookletcss', $this->myBase ."/booklet/jquery.booklet.latest.css");
 	}
 	
 	public function load_fancybox() {
-		$myBase = plugins_url("", __FILE__);
-		wp_enqueue_style('fancyboxcss', $myBase ."/fancybox/jquery.fancybox.css");
-		wp_enqueue_script('fancyboxjs', $myBase ."/fancybox/jquery.fancybox.pack.js");
+		wp_enqueue_style('fancyboxcss', $this->myBase ."/classes/fancybox/jquery.fancybox.css");
+		wp_enqueue_script('fancyboxjs', $this->myBase ."/classes/fancybox/jquery.fancybox.pack.js");
 		//wp_enqueue_script('fancyboxfullscreenjs', $myBase ."/fancybox/jquery.fullscreen.js");
 	}
 
