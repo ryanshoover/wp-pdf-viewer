@@ -136,6 +136,20 @@ table.describe input[type='submit'] {
 	font-size:1.5em;
 }
 
+table.describe th {
+	text-align: right;
+	padding-right: 1em;
+	min-width: 10em;
+}
+
+table.describe tr.extra-space td, table.describe tr.extra-space th  {
+	padding-top: 2em;
+}
+
+table.describe tr.initial-hide {
+	display: none;
+}
+
 .advanced_options {
 	width: 400px;	
 }

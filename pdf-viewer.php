@@ -78,16 +78,35 @@ class pdf_viewer{
 	  get_currentuserinfo();
 	  
 	  //insert new doc into post
+	  	$error = array();
 		if( isset($_POST['insert_existing']) ) {
-			$this->insert_doc_into_post($_POST);
+			//validate
+			$post = $_POST;
+			$post['linktext'] = sanitize_text_field($post['linktext']);
+			if(!$post['post_id']) $error[] = "Oops. Looks like you forgot to pick a document to insert.";
+			
+			//submit
+			if(empty($error))	
+				$this->insert_doc_into_post($post);
 		}
 		if( isset($_POST['insert_new']) ) { 
-		   	$post_id = $this->upload($_POST);
-			if(is_numeric($post_id)) {
-				$_POST['post_id'] = $post_id;
-				$this->insert_doc_into_post($_POST);
-			} else {
-				echo $post_id;//"Oops. Something went wrong uploading the file.";	
+			//validate
+			$post = $_POST;
+			$post['title'] = sanitize_text_field($post['title']);
+			$post['linktext'] = sanitize_text_field($post['linktext']);
+			if($post['title'] == '') $error[] = "Oops. You forgot to include a title for the document.";
+			if($_FILES["uploadfile"]["error"]> 0) $error[] = "Hmm. Somthing went wrong. Will you try uploading the file again?";
+			if($_FILES["uploadfile"]["type"] != "application/pdf") $error[] = "Oops. Looks like you didn't upload a PDF file. Sadly, that's all you can embed right now.";
+			
+			//submit
+			if(empty($error)) {
+		   		$post_id = $this->upload($post);
+				if(is_numeric($post_id)) {
+					$post['post_id'] = $post_id;
+					$this->insert_doc_into_post($post);
+				} else {
+					$error[] = "Hmm. Somthing went wrong. Will you try uploading the file again?";
+				}
 			}
 		}
 	  
@@ -99,6 +118,15 @@ class pdf_viewer{
       </div>
       <div style="clear:both;" id="upload_div"></div>
       <div id="upload-div" class="major-sec">
+		  <?php
+		  if(isset($_POST['insert_new']) && !empty($error)) {
+			  $error_msg  = "<div class='error'><ul>";
+			  foreach($error as $e) 
+				  $error_msg .= "<li>$e</li>";
+			  $error_msg .= "</ul></div>";
+			  echo $error_msg;
+		  }
+		  ?>
       	<form id="upload-form" action="" method="post" enctype="multipart/form-data">
         	<input type="hidden" name="insert_new" value="1">
             <div id="media-items">
@@ -110,7 +138,7 @@ class pdf_viewer{
             <label for="title">Document title</label><span class="alignright"><abbr title="required" class="required">*</abbr></span>
             </th>
             <td class="field">
-            <input type="text" name="title" aria-required="true" placeholder="Used as the document's title" class="required" minlength="2"></input>
+            <input type="text" name="title" aria-required="true" placeholder="Used as the document's title" class="required" minlength="2" value="<?php echo $post['title']; ?>">
             </td></tr>
             
             <tr>
@@ -118,67 +146,40 @@ class pdf_viewer{
             <label for="uploadfile">Choose a PDF file</label><span class="alignright"><abbr title="required" class="required">*</abbr></span>
             </th>
             <td class="field">
-            <input type="file" name="uploadfile" id="uploadfile" size="40" aria-required="true" class="required"> The file <em>must</em> be a PDF!
+            <input type="file" name="uploadfile" id="uploadfile" size="40" aria-required="true" class="required" accept="application/pdf"> The file <em>must</em> be a PDF!
             </td></tr>
             
-            <tr>
-            <td colspan="2">&nbsp;</td>
-            </tr>
-            
-            <tr>
+            <tr class="extra-space">
             <th valign="top" scope="row" class="label">
             <label for="lightbox">Lightbox</label>
             </th>
             <td class="field">
-            <input type="checkbox" name="lightbox"> Insert a link to a popup window view of the document?
+            <input type="checkbox" name="lightbox" class="show_other" <?php if($post['lightbox']) echo "checked"; ?>> Insert a link to a popup window view of the document?
             </td></tr>
-            <tr>
+			
+            <tr class="initial-hide" id="linktext-row">
+            <th valign="top" scope="row" class="label">
+            <label for="linktext">Link</label>
+            </th>
+            <td class="field">
+            <input type="text" size="30" name="linktext" placeholder="What should the link to the lightbox say?" value="<?php echo $post['linktext']; ?>">
+            </td></tr>
+			
+            <tr class="extra-space">
             <th valign="top" scope="row" class="label">
             <label for="booklet">Booklet</label>
             </th>
             <td class="field">
-            <input type="checkbox" name="booklet"> Display as a booklet with side-by-side pages?
+            <input type="checkbox" name="booklet" class="show_other" <?php if($post['booklet']) echo "checked"; ?>> Display as a booklet with side-by-side pages?
             </td></tr>
-            
-            <tr>
-            <td colspan="2">&nbsp;</td>
-            </tr>
-           </table>
-           
-           <div class="advanced_options">
-           <h2><img class='arrow arrow-right' src='<?php echo $this->myBase; ?>/images/arrowright.png'><img class='arrow arrow-down' src='<?php echo $this->myBase; ?>/images/arrowdown.png'>Advanced Options</h2>
-           <div>
-           <table class="describe">
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="linktext">Lightbox link</label>
-            </th>
-            <td class="field">
-            <input type="text" size="30" name="linktext" placeholder="What should the link to the lightbox say?">
-            </td></tr>
-            
-            <tr>
+			
+            <tr class="initial-hide" id="coverpage-row">
             <th valign="top" scope="row" class="label">
             <label for="coverpage">Cover page</label>
             </th>
             <td class="field">
-            <input type="checkbox" name="coverpage"> Does the PDF have a cover page?
+            <input type="checkbox" name="coverpage" <?php if($post['coverpage']) echo "checked"; ?>> Does the PDF have a cover page?
             </td></tr>
-            <!--
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="savable">Download</label>
-            </th>
-            <td class="field">
-            <input type="checkbox" name="savable" checked > Can someone download the file?
-            </td></tr>--> 
-            </table>
-           </div>
-           </div>
-           <table class="describe">
-            <tr>
-            <td colspan="2">&nbsp;</td>
-            </tr>
             
             <tr>
             <th valign="top" scope="row" class="label">
@@ -186,13 +187,6 @@ class pdf_viewer{
             <td class="field">
             <input type="submit" class="button" value="Insert new document"></input>
             </td></tr>
-            
-            <tr>
-            <td colspan="2">&nbsp;</td>
-            </tr>
-            <tr>
-            <td colspan="2"><em>Note: It may take several minutes to process large PDF files</em></td>
-            </tr>
             
             </table>
             
@@ -206,6 +200,15 @@ class pdf_viewer{
 	  //Choose existing  doc
 	  ?> 
       <div id="doc-lib-div" class="major-sec">
+		  <?php
+		  if(isset($_POST['insert_existing']) && !empty($error)) {
+			  $error_msg  = "<div class='error'><ul>";
+			  foreach($error as $e) 
+				  $error_msg .= "<li>$e</li>";
+			  $error_msg .= "</ul></div>";
+			  echo $error_msg;
+		  }
+		  ?>
       <h3 class="media-title">Pick a document to insert</h3>
       <div id="doc-lib-container">
       <?php
@@ -214,55 +217,43 @@ class pdf_viewer{
       </div>
         <form id="doc-lib-form" action="" method="post" style="clear:both;">
         	<input type="hidden" name="insert_existing" value="1">
-        	<input type="hidden" id="existing_post_id" name="post_id" value="1">
+        	<input type="hidden" id="existing_post_id" name="post_id" value="0">
             <input type="hidden" id="existing_title" name="title" value="none">
-           <table class="describe">
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="lightbox">Lightbox</label>
-            </th>
-            <td class="field">
-            <input type="checkbox" name="lightbox"> Insert a link to a popup window view of the document?
-            </td></tr>
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="booklet">Booklet</label>
-            </th>
-            <td class="field">
-            <input type="checkbox" name="booklet"> Display as a booklet with side-by-side pages?
-            </td></tr>
-            
-            <tr>
-            <td colspan="2">&nbsp;</td>
-            </tr>
-           </table>
-           
-           <div class="advanced_options">
-           <h2><img class='arrow arrow-right' src='<?php echo $this->myBase; ?>/images/arrowright.png'><img class='arrow arrow-down' src='<?php echo $this->myBase; ?>/images/arrowdown.png'>Advanced Options</h2>
-           <div>
-           <table class="describe">
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="linktext">Lightbox link</label>
-            </th>
-            <td class="field">
-            <input type="text" size="30" name="linktext" placeholder="What should the link to the lightbox say?">
-            </td></tr>
-            
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="coverpage">Cover page</label>
-            </th>
-            <td class="field">
-            <input type="checkbox" name="coverpage"> Does the PDF have a cover page?
-            </td></tr>
+           	<table class="describe">
+               <tr class="extra-space">
+               <th valign="top" scope="row" class="label">
+               <label for="lightbox">Lightbox</label>
+               </th>
+               <td class="field">
+               <input type="checkbox" name="lightbox" class="show_other" <?php if($post['lightbox']) echo "checked"; ?>> Insert a link to a popup window view of the document?
+               </td></tr>
+			
+               <tr class="initial-hide" id="linktext-row">
+               <th valign="top" scope="row" class="label">
+               <label for="linktext">Link</label>
+               </th>
+               <td class="field">
+               <input type="text" size="30" name="linktext" placeholder="What should the link to the lightbox say?" value="<?php echo $post['linktext']; ?>">
+               </td></tr>
+			
+               <tr class="extra-space">
+               <th valign="top" scope="row" class="label">
+               <label for="booklet">Booklet</label>
+               </th>
+               <td class="field">
+               <input type="checkbox" name="booklet" class="show_other" <?php if($post['booklet']) echo "checked"; ?>> Display as a booklet with side-by-side pages?
+               </td></tr>
+			
+               <tr class="initial-hide" id="coverpage-row">
+               <th valign="top" scope="row" class="label">
+               <label for="coverpage">Cover page</label>
+               </th>
+               <td class="field">
+               <input type="checkbox" name="coverpage" <?php if($post['coverpage']) echo "checked"; ?>> Does the PDF have a cover page?
+               </td></tr>
             
             
-            </table>
-           </div>
-           </div>
-           <table class="describe">
-            <tr>
+		    <tr>
             <th scope="row" class="label">
             </th>
             <td class="field">

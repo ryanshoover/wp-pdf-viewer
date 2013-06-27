@@ -52,16 +52,9 @@ function loadPageOne(pdf, container) {
 
 jQuery(document).ready(function(e) {
 	//form validation
-	/*
-	jQuery("#upload-form").validate({
-	  rules: {
-		uploadfile: {
-		  required: true,
-		  accept: "application/pdf"
-		}
-	  }
-	});
-	*/
+	if(jQuery('div#doc-lib-div div.error').length) {
+		clickNav('doc-lib'); 	//show the pick existing tab
+	}
 	
 	//nav buttons
 	jQuery('#upload').click(function(e) {
@@ -93,5 +86,17 @@ jQuery(document).ready(function(e) {
 	  jQuery(".arrow-down").toggle();
 	  e.preventDefault();
     });
+	
+	//show lightbox label
+	jQuery(".show_other").each( function() {
+		//initial setup, show if checked (from form validation)
+		if(jQuery(this).attr('checked')) {
+			jQuery(this).closest('tr').next('.initial-hide').toggle('show');
+		}
+		//change on click
+		jQuery(this).change(function() {
+			jQuery(this).closest('tr').next('.initial-hide').toggle('show');
+		});
+	});
 	
 });
