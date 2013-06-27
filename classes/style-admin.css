@@ -79,22 +79,31 @@
  
 
 .doc-div {
+	position:relative;
 	width:90px;
 	margin:10px;
-	padding:5px;
 	border:thin solid #dfdfdf;
 	float:left;
 	cursor: pointer;
-	overflow:hidden;
 	background-color:#ddd;
-	border: 3px solid #ccc;
+	border: 3px solid #999;
 }
-.doc-div img {
-	width:80px;
+.doc-div canvas {
+	position:relative;
+	width:100%;
 	background-color:#fff;
 }
 .doc-div p {
+	position:absolute;
+	bottom:0;
+	width: 100%;
+	height: 16px;
+	margin: 0;
+	padding: 3px 0;
+	overflow:hidden;
 	font-size:14px;
+	text-align:center;
+	background-color: rgba(153,153,153,0.5);
 	color: #333;
 }
 
@@ -103,9 +112,12 @@
 	background: none;
 	background: rgba(33,117,155,0.2);
 }
+.doc-selected p {
+	background-color: rgba(33,117,155,0.5);
+}
 
 img.delete {
-	margin: -15px 0 0 85px;
+	margin: -10px 0 0 80px;
 	position:absolute;
 	z-index:10;
 	width: 20px;

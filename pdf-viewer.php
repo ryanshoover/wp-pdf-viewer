@@ -66,6 +66,7 @@ class pdf_viewer{
 	  wp_enqueue_script('media-upload');
 	  wp_enqueue_script('thickbox');
 	  wp_enqueue_style( 'thickbox');
+	  wp_enqueue_script('pdfjs', $this->myBase .'/classes/pdf.js/pdf.js');
 	  wp_enqueue_script('pdf-viewer-admin', $this->myBase .'/classes/script-admin.js');
 	  wp_enqueue_style( 'pdf-viewer-admin', $this->myBase .'/classes/style-admin.css');
 	  //wp_enqueue_script('jquery-validate', $this->myBase .'/classes/jquery.validate.min.js');
@@ -102,7 +103,7 @@ class pdf_viewer{
         	<input type="hidden" name="insert_new" value="1">
             <div id="media-items">
             <h3 class="media-title">Upload a new document</h3>
-            
+
             <table class="describe">
             <tr>
             <th valign="top" scope="row" class="label">
@@ -163,14 +164,14 @@ class pdf_viewer{
             <td class="field">
             <input type="checkbox" name="coverpage"> Does the PDF have a cover page?
             </td></tr>
-            
+            <!--
             <tr>
             <th valign="top" scope="row" class="label">
             <label for="savable">Download</label>
             </th>
             <td class="field">
             <input type="checkbox" name="savable" checked > Can someone download the file?
-            </td></tr>
+            </td></tr>--> 
             </table>
            </div>
            </div>
@@ -256,13 +257,7 @@ class pdf_viewer{
             <input type="checkbox" name="coverpage"> Does the PDF have a cover page?
             </td></tr>
             
-            <tr>
-            <th valign="top" scope="row" class="label">
-            <label for="savable">Download</label>
-            </th>
-            <td class="field">
-            <input type="checkbox" name="savable" checked > Can someone download the file?
-            </td></tr>
+            
             </table>
            </div>
            </div>
@@ -307,8 +302,21 @@ class pdf_viewer{
 	  $docs = get_posts($args);
 	  $return = '';
 	  foreach($docs as $doc) {
+		  $return .= "<div class='doc-div' id='".$doc->ID."'><img src='$this->myBase/images/x-circle.png' class='delete' id='delete_".$doc->ID."' title='Delete $doc->post_name'><canvas id='pdf-canvas-".$doc->ID."'></canvas><p>" .$doc->post_name."</p></div>";
+	  }
+	  $return .= "
+	  <script>
+	  jQuery(document).ready(function(e) {
+	  PDFJS.workerSrc='".$this->myBase ."/classes/pdf.js/pdf.js';\n";
+	  foreach($docs as $doc) {
+		$return .= "loadPageOne('$doc->guid', 'pdf-canvas-$doc->ID');\n";  
+	  }
+	  $return .= "});\n</script>\n";
+	  /*
+	  foreach($docs as $doc) {
 		$return .= "<div class='doc-div' id='".$doc->ID."'><img src='$this->myBase/images/x-circle.png' class='delete' id='delete_".$doc->ID."'><img src='".$doc->guid ."/page-000.png'><p>" .$doc->post_name."</p></div>";  
 	  }	
+	  */
 	  return $return;
 	}
 	

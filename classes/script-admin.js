@@ -31,6 +31,25 @@ function configDeleteButton() {
 	});
 }
 
+//load 1st page of pdf
+function loadPageOne(pdf, container) {
+	PDFJS.getDocument(pdf).then(function(pdf) {
+	  pdf.getPage(1).then(function(page) {
+		var scale = 1.5;
+		var viewport = page.getViewport(scale);
+		var canvas = document.getElementById(container);
+		var context = canvas.getContext('2d');
+		canvas.height = viewport.height;
+		canvas.width = viewport.width;
+		var renderContext = {
+		  canvasContext: context,
+		  viewport: viewport
+		};
+		page.render(renderContext);
+	  });
+	});
+}
+
 jQuery(document).ready(function(e) {
 	//form validation
 	/*
