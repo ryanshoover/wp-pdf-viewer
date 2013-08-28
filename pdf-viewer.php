@@ -365,7 +365,7 @@ class pdf_viewer{
 	public function upload($input) {
 		$title = urlencode( basename( $input['title']) );
 		$wp_upload_dir = wp_upload_dir();
-		$filename = urlencode($_FILES['uploadfile']['name']);
+		$filename = urlencode(str_replace(' ', '', $_FILES['uploadfile']['name']));
 		
 		if( move_uploaded_file($_FILES['uploadfile']['tmp_name'], $wp_upload_dir['path']."/$filename" ) ) {
 			 $post_id = wp_insert_post( array(
@@ -399,7 +399,7 @@ class pdf_viewer{
 		), $atts ) );
 		
 		$post = get_post($post_id);
-		$post_path = $post->guid;
+		$post_path = urlencode($post->guid);
 		
 		if($lightbox) {
 			//insert link that opens pdf in a lightbox
