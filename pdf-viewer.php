@@ -8,7 +8,7 @@
 *   Version: 1.00
 **/
 
-//for initialization of features and dashboard admin
+
 class pdf_viewer{
 	
 	private $myBase; 
